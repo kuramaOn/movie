@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Content {
+  id           Int            @id @default(autoincrement())
+  title        String         @db.VarChar(255)
+  description  String?        @db.Text
+  type         ContentType
+  videoUrl     String         @map("video_url") @db.Text
+  thumbnailUrl String?        @map("thumbnail_url") @db.Text
+  year         Int?
+  duration     Int?
+  rating       Decimal?       @db.Decimal(3, 1)
+  cast         String?        @db.Text
+  viewCount    Int            @default(0) @map("view_count")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  feedSourceId Int?           @map("feed_source_id")
+  feedSource   FeedSource?    @relation(fields: [feedSourceId], references: [id])
+  genres       ContentGenre[]
+
+  @@index([feedSourceId], map: "content_feed_source_id_fkey")
+  @@map("content")
+}
+
+model Genre {
+  id        Int            @id @default(autoincrement())
+  name      String         @unique @db.VarChar(100)
+  slug      String         @unique @db.VarChar(100)
+  createdAt DateTime       @default(now()) @map("created_at")
+  contents  ContentGenre[]
+
+  @@map("genres")
+}
+
+model ContentGenre {
+  contentId Int     @map("content_id")
+  genreId   Int     @map("genre_id")
+  content   Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  genre     Genre   @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([contentId, genreId])
+  @@index([genreId], map: "content_genres_genre_id_fkey")
+  @@map("content_genres")
+}
+
+model FeedSource {
+  id           Int       @id @default(autoincrement())
+  name         String    @db.VarChar(255)
+  url          String    @db.Text
+  type         FeedType
+  apiKey       String?   @map("api_key") @db.VarChar(255)
+  autoSync     Boolean   @default(false) @map("auto_sync")
+  syncInterval Int       @default(24) @map("sync_interval")
+  lastSynced   DateTime? @map("last_synced")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  contents     Content[]
+  syncLogs     SyncLog[]
+
+  @@map("feed_sources")
+}
+
+model SyncLog {
+  id            Int        @id @default(autoincrement())
+  feedSourceId  Int        @map("feed_source_id")
+  status        SyncStatus
+  itemsFound    Int        @default(0) @map("items_found")
+  itemsImported Int        @default(0) @map("items_imported")
+  errorMessage  String?    @map("error_message") @db.Text
+  syncedAt      DateTime   @default(now()) @map("synced_at")
+  feedSource    FeedSource @relation(fields: [feedSourceId], references: [id], onDelete: Cascade)
+
+  @@index([feedSourceId], map: "sync_logs_feed_source_id_fkey")
+  @@map("sync_logs")
+}
+
+enum ContentType {
+  movie
+  documentary
+}
+
+enum FeedType {
+  rss
+  json_api
+  youtube_channel
+  youtube_playlist
+  vimeo
+}
+
+enum SyncStatus {
+  success
+  error
+}
