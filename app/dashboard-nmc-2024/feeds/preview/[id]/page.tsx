@@ -36,12 +36,30 @@ export default function PreviewFeed({ params }: { params: { id: string } }) {
       if (response.ok) {
         setVideos(data.videos || []);
         fetchGenres();
+        
+        if (data.videos && data.videos.length === 0) {
+          alert(`Feed preview successful but no videos found.\n\nFeed: ${data.feedName}\nType: ${data.feedType}\n\nThis could mean:\n- The feed has no items\n- No video URLs were found in the feed items\n- The feed format may not be compatible`);
+        }
       } else {
-        alert(`Error: ${data.error}`);
+        let errorMessage = `Error previewing feed: ${data.error}`;
+        
+        if (data.feedName) {
+          errorMessage += `\n\nFeed: ${data.feedName}`;
+        }
+        if (data.feedType) {
+          errorMessage += `\nType: ${data.feedType}`;
+        }
+        if (data.feedUrl) {
+          errorMessage += `\nURL: ${data.feedUrl}`;
+        }
+        
+        errorMessage += '\n\nTips:\n- Check that the feed URL is accessible\n- Verify the feed type is correct\n- Check Vercel logs for more details';
+        
+        alert(errorMessage);
       }
     } catch (error) {
       console.error('Error previewing feed:', error);
-      alert('Error previewing feed');
+      alert(`Network error while previewing feed.\n\nThis could be:\n- Network timeout\n- Server error\n- Connection issue\n\nCheck browser console for details.`);
     } finally {
       setLoading(false);
     }

@@ -23,20 +23,28 @@ export async function POST(
       );
     }
 
+    console.log(`[Preview] Fetching feed with ID: ${id}`);
+    
     const feed = await prisma.feedSource.findUnique({
       where: { id },
     });
 
     if (!feed) {
+      console.log(`[Preview] Feed not found with ID: ${id}`);
       return NextResponse.json(
         { error: 'Feed not found' },
         { status: 404 }
       );
     }
 
+    console.log(`[Preview] Found feed: ${feed.name} (${feed.type})`);
+    console.log(`[Preview] Feed URL: ${feed.url}`);
+
     let videos;
 
     try {
+      console.log(`[Preview] Starting to parse feed...`);
+      
       switch (feed.type) {
         case 'rss':
           videos = await parseRSSFeed(feed.url);
@@ -78,22 +86,32 @@ export async function POST(
           );
       }
 
+      console.log(`[Preview] Successfully parsed ${videos.length} videos`);
+      
       return NextResponse.json({
         feedName: feed.name,
+        feedType: feed.type,
+        feedUrl: feed.url,
         videos,
         count: videos.length,
       });
     } catch (parseError: any) {
-      console.error('Error parsing feed:', parseError);
+      console.error('[Preview] Error parsing feed:', parseError);
+      
       return NextResponse.json(
-        { error: parseError.message || 'Failed to parse feed' },
+        { 
+          error: parseError.message || 'Failed to parse feed',
+          feedName: feed.name,
+          feedType: feed.type,
+          feedUrl: feed.url,
+        },
         { status: 500 }
       );
     }
-  } catch (error) {
-    console.error('Error previewing feed:', error);
+  } catch (error: any) {
+    console.error('[Preview] Error:', error);
     return NextResponse.json(
-      { error: 'Failed to preview feed' },
+      { error: error.message || 'Failed to preview feed' },
       { status: 500 }
     );
   }
