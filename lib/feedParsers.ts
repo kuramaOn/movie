@@ -213,21 +213,64 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
 
 export async function parseJSONAPI(url: string): Promise<ParsedVideo[]> {
   try {
-    const response = await axios.get(url);
+    console.log(`[JSON Parser] Fetching feed from: ${url}`);
+    const response = await axios.get(url, {
+      timeout: 15000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json, application/feed+json, */*'
+      }
+    });
     const data = response.data;
+    
+    console.log(`[JSON Parser] Successfully fetched data`);
     
     const videos: ParsedVideo[] = [];
     
     // Try common JSON structures
-    const items = data.videos || data.items || data.data || (Array.isArray(data) ? data : []);
+    const items = data.videos || data.items || data.data || data.entries || (Array.isArray(data) ? data : []);
+    
+    if (!items || items.length === 0) {
+      console.log('[JSON Parser] No items found in feed');
+      return [];
+    }
+    
+    console.log(`[JSON Parser] Processing ${items.length} items`);
     
     for (const item of items) {
+      // Handle different video URL structures
+      let videoUrl = item.url || item.video_url || item.videoUrl || item.external_url || item.link || '';
+      
+      // Handle attachments/enclosures in JSON Feed format
+      if (!videoUrl && item.attachments && Array.isArray(item.attachments)) {
+        const videoAttachment = item.attachments.find((att: any) => 
+          att.mime_type?.startsWith('video/') || att.url?.match(/\.(mp4|webm|ogg|mov)$/i)
+        );
+        if (videoAttachment) {
+          videoUrl = videoAttachment.url;
+        }
+      }
+      
+      // Handle thumbnail
+      let thumbnailUrl = item.thumbnail || item.thumbnail_url || item.thumbnailUrl || item.image || '';
+      
+      // Try image field if it's an object
+      if (!thumbnailUrl && item.image && typeof item.image === 'object') {
+        thumbnailUrl = item.image.url || item.image.src || '';
+      }
+      
+      // Handle banner_image or cover_image
+      if (!thumbnailUrl) {
+        thumbnailUrl = item.banner_image || item.cover_image || '';
+      }
+      
       const video: ParsedVideo = {
         title: item.title || item.name || 'Untitled',
-        description: item.description || item.summary || '',
-        videoUrl: item.url || item.video_url || item.videoUrl || '',
-        thumbnailUrl: item.thumbnail || item.thumbnail_url || item.thumbnailUrl || item.image || '',
-        duration: item.duration || undefined,
+        description: item.description || item.summary || item.content_text || item.content_html || '',
+        videoUrl: videoUrl,
+        thumbnailUrl: thumbnailUrl,
+        duration: item.duration || item.duration_in_seconds || undefined,
+        publishedAt: item.date_published || item.published || item.pubDate ? new Date(item.date_published || item.published || item.pubDate) : undefined,
       };
       
       if (video.videoUrl) {
@@ -245,47 +288,78 @@ export async function parseJSONAPI(url: string): Promise<ParsedVideo[]> {
       })
     );
     
+    console.log(`[JSON Parser] Successfully parsed ${videosWithThumbnails.length} videos`);
     return videosWithThumbnails;
-  } catch (error) {
-    console.error('Error parsing JSON API:', error);
-    throw new Error('Failed to parse JSON API');
+  } catch (error: any) {
+    console.error('[JSON Parser] Error:', error);
+    const errorMessage = error.message || 'Unknown error';
+    throw new Error(`Failed to parse JSON feed: ${errorMessage}`);
   }
 }
 
 export async function parseYouTubeChannel(channelId: string, apiKey: string): Promise<ParsedVideo[]> {
   try {
+    if (!apiKey) {
+      throw new Error('YouTube API key is required');
+    }
+    
+    console.log(`[YouTube Parser] Fetching videos from channel: ${channelId}`);
+    
     // Search for videos in the channel
     const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&maxResults=50&type=video&order=date&key=${apiKey}`;
-    const searchResponse = await axios.get(searchUrl);
+    const searchResponse = await axios.get(searchUrl, { timeout: 15000 });
+    
+    if (!searchResponse.data.items || searchResponse.data.items.length === 0) {
+      console.log('[YouTube Parser] No videos found in channel');
+      return [];
+    }
+    
+    console.log(`[YouTube Parser] Found ${searchResponse.data.items.length} videos`);
     
     const videos: ParsedVideo[] = [];
     
     for (const item of searchResponse.data.items) {
       const videoId = item.id.videoId;
       
-      // Get video details for duration
-      const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&id=${videoId}&key=${apiKey}`;
-      const detailsResponse = await axios.get(detailsUrl);
-      
-      if (detailsResponse.data.items.length > 0) {
-        const videoData = detailsResponse.data.items[0];
-        const duration = parseYouTubeDuration(videoData.contentDetails.duration);
+      try {
+        // Get video details for duration
+        const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&id=${videoId}&key=${apiKey}`;
+        const detailsResponse = await axios.get(detailsUrl, { timeout: 15000 });
         
-        videos.push({
-          title: item.snippet.title,
-          description: item.snippet.description,
-          videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
-          thumbnailUrl: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default.url,
-          duration: duration,
-          publishedAt: new Date(item.snippet.publishedAt),
-        });
+        if (detailsResponse.data.items.length > 0) {
+          const videoData = detailsResponse.data.items[0];
+          const duration = parseYouTubeDuration(videoData.contentDetails.duration);
+          
+          videos.push({
+            title: item.snippet.title,
+            description: item.snippet.description,
+            videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
+            thumbnailUrl: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default.url,
+            duration: duration,
+            publishedAt: new Date(item.snippet.publishedAt),
+          });
+        }
+      } catch (videoError) {
+        console.error(`[YouTube Parser] Error fetching details for video ${videoId}:`, videoError);
+        // Continue with other videos
       }
     }
     
+    console.log(`[YouTube Parser] Successfully parsed ${videos.length} videos`);
     return videos;
-  } catch (error) {
-    console.error('Error parsing YouTube channel:', error);
-    throw new Error('Failed to parse YouTube channel');
+  } catch (error: any) {
+    console.error('[YouTube Parser] Error:', error);
+    let errorMessage = error.message || 'Unknown error';
+    
+    if (error.response?.status === 403) {
+      errorMessage = 'Invalid or expired YouTube API key';
+    } else if (error.response?.status === 404) {
+      errorMessage = 'YouTube channel not found';
+    } else if (error.response?.data?.error?.message) {
+      errorMessage = error.response.data.error.message;
+    }
+    
+    throw new Error(`Failed to parse YouTube channel: ${errorMessage}`);
   }
 }
 
