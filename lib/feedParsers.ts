@@ -34,7 +34,7 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
         ['content:encoded', 'contentEncoded']
       ]
     },
-    timeout: 15000, // 15 second timeout for Vercel
+    timeout: 30000, // 30 second timeout for Vercel
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*'
@@ -134,7 +134,7 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
     // Fallback: Try fetching with axios and parsing manually
     try {
       const response = await axios.get(url, {
-        timeout: 15000,
+        timeout: 30000,
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           'Accept': 'application/rss+xml, application/xml, text/xml, */*'
@@ -215,7 +215,7 @@ export async function parseJSONAPI(url: string): Promise<ParsedVideo[]> {
   try {
     console.log(`[JSON Parser] Fetching feed from: ${url}`);
     const response = await axios.get(url, {
-      timeout: 15000,
+      timeout: 30000,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': 'application/json, application/feed+json, */*'
@@ -307,7 +307,7 @@ export async function parseYouTubeChannel(channelId: string, apiKey: string): Pr
     
     // Search for videos in the channel
     const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&maxResults=50&type=video&order=date&key=${apiKey}`;
-    const searchResponse = await axios.get(searchUrl, { timeout: 15000 });
+    const searchResponse = await axios.get(searchUrl, { timeout: 30000 });
     
     if (!searchResponse.data.items || searchResponse.data.items.length === 0) {
       console.log('[YouTube Parser] No videos found in channel');
@@ -324,7 +324,7 @@ export async function parseYouTubeChannel(channelId: string, apiKey: string): Pr
       try {
         // Get video details for duration
         const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&id=${videoId}&key=${apiKey}`;
-        const detailsResponse = await axios.get(detailsUrl, { timeout: 15000 });
+        const detailsResponse = await axios.get(detailsUrl, { timeout: 30000 });
         
         if (detailsResponse.data.items.length > 0) {
           const videoData = detailsResponse.data.items[0];

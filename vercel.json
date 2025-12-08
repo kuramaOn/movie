@@ -2,5 +2,25 @@
   "crons": [{
     "path": "/api/cron/sync-feeds",
     "schedule": "0 0 * * *"
-  }]
+  }],
+  "functions": {
+    "app/api/admin/feeds/*/preview/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/admin/feeds/*/sync/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/admin/feeds/*/import/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/cron/sync-feeds/route.ts": {
+      "maxDuration": 300
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    }
+  ]
 }
