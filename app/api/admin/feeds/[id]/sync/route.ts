@@ -37,6 +37,9 @@ export async function POST(
     let videos;
 
     try {
+      console.log(`Syncing feed: ${feed.name} (${feed.type})`);
+      console.log(`Feed URL: ${feed.url}`);
+      
       switch (feed.type) {
         case 'rss':
           videos = await parseRSSFeed(feed.url);

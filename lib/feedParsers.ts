@@ -22,6 +22,10 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
         ['description', 'description'],
         ['content:encoded', 'contentEncoded']
       ]
+    },
+    timeout: 10000, // 10 second timeout
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
   });
 
@@ -107,9 +111,10 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
     );
     
     return videosWithThumbnails;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error parsing RSS feed:', error);
-    throw new Error('Failed to parse RSS feed');
+    const errorMessage = error.message || 'Unknown error';
+    throw new Error(`Failed to parse RSS feed: ${errorMessage}`);
   }
 }
 
