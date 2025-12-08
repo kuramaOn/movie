@@ -13,6 +13,17 @@ export interface ParsedVideo {
 }
 
 export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
+  // Validate URL
+  if (!url || typeof url !== 'string') {
+    throw new Error('Invalid feed URL provided');
+  }
+
+  try {
+    new URL(url);
+  } catch (e) {
+    throw new Error(`Invalid URL format: ${url}`);
+  }
+
   const parser = new Parser({
     customFields: {
       item: [
@@ -23,14 +34,19 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
         ['content:encoded', 'contentEncoded']
       ]
     },
-    timeout: 10000, // 10 second timeout
+    timeout: 15000, // 15 second timeout for Vercel
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*'
     }
   });
 
+  let feed;
+  
   try {
-    const feed = await parser.parseURL(url);
+    console.log(`[RSS Parser] Fetching feed from: ${url}`);
+    feed = await parser.parseURL(url);
+    console.log(`[RSS Parser] Successfully fetched feed with ${feed.items?.length || 0} items`);
     
     const videos = feed.items.map(item => {
       // Extract video URL
@@ -110,10 +126,87 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
       })
     );
     
+    console.log(`[RSS Parser] Successfully parsed ${videosWithThumbnails.length} videos with valid URLs`);
     return videosWithThumbnails;
-  } catch (error: any) {
-    console.error('Error parsing RSS feed:', error);
-    const errorMessage = error.message || 'Unknown error';
+  } catch (parseError: any) {
+    console.error('[RSS Parser] Primary parser failed, trying fallback method...');
+    
+    // Fallback: Try fetching with axios and parsing manually
+    try {
+      const response = await axios.get(url, {
+        timeout: 15000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+        }
+      });
+      
+      console.log('[RSS Parser] Fetched feed with axios, attempting manual parse...');
+      
+      // Try to parse the XML manually
+      const xmlData = response.data;
+      feed = await parser.parseString(xmlData);
+      console.log(`[RSS Parser] Fallback successful! Parsed ${feed.items?.length || 0} items`);
+      
+      // Continue with normal processing...
+      const videos = feed.items.map(item => {
+        let videoUrl = '';
+        if (item.enclosure && item.enclosure.url) {
+          videoUrl = item.enclosure.url;
+        } else if ((item as any).mediaContent) {
+          const mediaContent = (item as any).mediaContent;
+          if (Array.isArray(mediaContent)) {
+            videoUrl = mediaContent[0]?.$ ? mediaContent[0].$.url : mediaContent[0];
+          } else {
+            videoUrl = mediaContent.$ ? mediaContent.$.url : mediaContent;
+          }
+        } else if (item.link) {
+          videoUrl = item.link;
+        }
+        
+        let thumbnailUrl = '';
+        if ((item as any).mediaThumbnail) {
+          const mediaThumbnail = (item as any).mediaThumbnail;
+          if (Array.isArray(mediaThumbnail)) {
+            thumbnailUrl = mediaThumbnail[0]?.$ ? mediaThumbnail[0].$.url : mediaThumbnail[0];
+          } else {
+            thumbnailUrl = mediaThumbnail.$ ? mediaThumbnail.$.url : mediaThumbnail;
+          }
+        }
+        
+        return {
+          title: item.title || 'Untitled',
+          description: item.contentSnippet || item.content || '',
+          videoUrl: videoUrl,
+          thumbnailUrl: thumbnailUrl,
+          publishedAt: item.pubDate ? new Date(item.pubDate) : undefined,
+        };
+      }).filter(item => item.videoUrl);
+      
+      return videos;
+      
+    } catch (fallbackError: any) {
+      console.error('[RSS Parser] Fallback method also failed:', fallbackError);
+      // Continue with original error handling
+    }
+    
+    const error = parseError;
+    
+    // Provide more specific error messages
+    let errorMessage = 'Unknown error';
+    
+    if (error.code === 'ENOTFOUND') {
+      errorMessage = 'Feed URL not found or DNS resolution failed';
+    } else if (error.code === 'ETIMEDOUT' || error.code === 'ESOCKETTIMEDOUT') {
+      errorMessage = 'Feed request timed out - the server took too long to respond';
+    } else if (error.code === 'ECONNREFUSED') {
+      errorMessage = 'Connection refused - the server rejected the connection';
+    } else if (error.code === 'CERT_HAS_EXPIRED' || error.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE') {
+      errorMessage = 'SSL certificate error - the feed URL may have an invalid certificate';
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
     throw new Error(`Failed to parse RSS feed: ${errorMessage}`);
   }
 }
