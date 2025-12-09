@@ -13,6 +13,7 @@ import {
   ArrowUturnRightIcon,
 } from '@heroicons/react/24/solid';
 import { RectangleStackIcon } from '@heroicons/react/24/outline';
+import { convertToEmbeddableUrl, getVideoSourceInfo, isDirectVideoFile } from '@/lib/videoUrlConverter';
 
 interface EnhancedVideoPlayerProps {
   url: string;
@@ -31,7 +32,13 @@ export default function EnhancedVideoPlayer({
 }: EnhancedVideoPlayerProps) {
   const playerRef = useRef<ReactPlayer>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Get video source info
+  const videoSource = getVideoSourceInfo(url);
+  const embeddableUrl = videoSource.embedUrl;
+  const useIframe = videoSource.requiresIframe;
 
   const [playing, setPlaying] = useState(autoPlay);
   const [volume, setVolume] = useState(1);
@@ -177,6 +184,54 @@ export default function EnhancedVideoPlayer({
 
   const playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
+  // Render iframe embed for external platforms
+  if (useIframe) {
+    return (
+      <div
+        ref={containerRef}
+        className={`relative bg-black ${isTheaterMode ? 'w-full' : 'w-full max-w-7xl mx-auto'}`}
+      >
+        <div className="relative aspect-video">
+          <iframe
+            ref={iframeRef}
+            src={embeddableUrl}
+            className="w-full h-full"
+            frameBorder="0"
+            allowFullScreen
+            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+            sandbox="allow-same-origin allow-scripts allow-presentation"
+            title={title || 'Video Player'}
+          />
+        </div>
+        
+        {/* Source Info */}
+        <div className="mt-4 p-4 bg-gray-900 rounded-lg text-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-gray-400">Source:</span>
+              <span className="ml-2 font-semibold text-white">{videoSource.platform}</span>
+            </div>
+            <a
+              href={videoSource.originalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-netflix-red hover:text-red-400 transition-colors flex items-center space-x-1"
+            >
+              <span>View Original</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+          </div>
+          <p className="mt-2 text-gray-400 text-xs">
+            This video is embedded from {videoSource.platform}. All controls are provided by the source platform.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Render custom player for direct video files
   return (
     <div
       ref={containerRef}
@@ -188,7 +243,7 @@ export default function EnhancedVideoPlayer({
       <div className="relative aspect-video">
         <ReactPlayer
           ref={playerRef}
-          url={url}
+          url={embeddableUrl}
           playing={playing}
           volume={volume}
           muted={muted}

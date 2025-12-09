@@ -3,6 +3,7 @@ import { parseStringPromise } from 'xml2js';
 import Parser from 'rss-parser';
 import * as cheerio from 'cheerio';
 import { generateThumbnail, extractOGImageFromPage } from './thumbnailGenerator';
+import { convertToEmbeddableUrl } from './videoUrlConverter';
 
 export interface ParsedVideo {
   title: string;
@@ -122,11 +123,14 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
       };
     }).filter(item => item.videoUrl);
     
-    // Auto-generate missing thumbnails
+    // Convert URLs to embeddable format and auto-generate missing thumbnails
     const videosWithThumbnails = await Promise.all(
       videos.map(async (video) => {
+        // Convert to embeddable URL
+        video.videoUrl = convertToEmbeddableUrl(video.videoUrl);
+        
+        // Try to generate thumbnail from video URL if missing
         if (!video.thumbnailUrl && video.videoUrl) {
-          // Try to generate thumbnail from video URL
           video.thumbnailUrl = await generateThumbnail(video.videoUrl);
         }
         return video;
@@ -207,7 +211,7 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
         return {
           title: item.title || 'Untitled',
           description: item.contentSnippet || item.content || '',
-          videoUrl: videoUrl,
+          videoUrl: convertToEmbeddableUrl(videoUrl),
           thumbnailUrl: thumbnailUrl,
           publishedAt: item.pubDate ? new Date(item.pubDate) : undefined,
         };
@@ -351,9 +355,13 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
         
         console.log(`[RSS Parser] Cheerio fallback successful! Parsed ${videos.length} videos`);
         
-        // Auto-generate missing thumbnails
+        // Convert URLs to embeddable format and auto-generate missing thumbnails
         const videosWithThumbnails = await Promise.all(
           videos.map(async (video) => {
+            // Convert to embeddable URL
+            video.videoUrl = convertToEmbeddableUrl(video.videoUrl);
+            
+            // Generate thumbnail if missing
             if (!video.thumbnailUrl && video.videoUrl) {
               video.thumbnailUrl = await generateThumbnail(video.videoUrl);
             }
