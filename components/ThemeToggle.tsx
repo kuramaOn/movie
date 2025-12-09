@@ -21,7 +21,10 @@ export default function ThemeToggle() {
     document.documentElement.classList.toggle('light', newTheme === 'light');
   };
 
-  if (!mounted) return null;
+  // Don't render on server to avoid hydration mismatch
+  if (!mounted) {
+    return <div className="w-10 h-10"></div>;
+  }
 
   return (
     <button
