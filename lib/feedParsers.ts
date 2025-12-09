@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { parseStringPromise } from 'xml2js';
 import Parser from 'rss-parser';
+import * as cheerio from 'cheerio';
 import { generateThumbnail, extractOGImageFromPage } from './thumbnailGenerator';
 
 export interface ParsedVideo {
@@ -158,6 +159,16 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
       // This regex finds patterns where a quote is followed directly by a letter (attribute name)
       xmlData = xmlData.replace(/(")\s*([a-zA-Z_][\w:-]*=)/g, '$1 $2');
       
+      // Also handle single quotes
+      xmlData = xmlData.replace(/(')(\s*)([a-zA-Z_][\w:-]*=)/g, '$1 $3');
+      
+      // Fix attributes without proper spacing after closing tag angle bracket
+      xmlData = xmlData.replace(/>\s*([a-zA-Z_][\w:-]*=")/g, '> $1');
+      
+      // Fix consecutive quotes without space
+      xmlData = xmlData.replace(/""([a-zA-Z_][\w:-]*)/g, '" $1');
+      xmlData = xmlData.replace(/''([a-zA-Z_][\w:-]*)/g, "' $1");
+      
       // Fix other common XML issues
       xmlData = xmlData.replace(/&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;');
       
@@ -207,7 +218,130 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
     } catch (fallbackError: any) {
       console.error('[RSS Parser] Fallback method also failed:', fallbackError);
       console.error('[RSS Parser] Fallback error details:', fallbackError.message);
-      // Continue with original error handling
+      
+      // Third fallback: Try parsing with cheerio (HTML parser - much more lenient)
+      try {
+        console.log('[RSS Parser] Trying third fallback with cheerio (HTML parser)...');
+        const response = await axios.get(url, {
+          timeout: 30000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+          },
+          responseType: 'text'
+        });
+        
+        const $ = cheerio.load(response.data, { xmlMode: true });
+        const items = $('item, entry');
+        
+        if (items.length === 0) {
+          console.log('[RSS Parser] Cheerio fallback found no items');
+          throw new Error('No items found in feed');
+        }
+        
+        console.log(`[RSS Parser] Cheerio found ${items.length} items`);
+        
+        const videos: ParsedVideo[] = [];
+        
+        items.each((index, element) => {
+          const $item = $(element);
+          
+          // Extract title
+          const title = $item.find('title').first().text().trim() || 'Untitled';
+          
+          // Extract description
+          const description = $item.find('description').first().text().trim() || 
+                            $item.find('content\\:encoded, encoded').first().text().trim() || 
+                            $item.find('summary').first().text().trim() || '';
+          
+          // Extract video URL
+          let videoUrl = '';
+          
+          // Try enclosure
+          const enclosure = $item.find('enclosure').first();
+          if (enclosure.length && enclosure.attr('url')) {
+            videoUrl = enclosure.attr('url') || '';
+          }
+          
+          // Try media:content
+          if (!videoUrl) {
+            const mediaContent = $item.find('media\\:content, content').first();
+            if (mediaContent.length && mediaContent.attr('url')) {
+              videoUrl = mediaContent.attr('url') || '';
+            }
+          }
+          
+          // Try link
+          if (!videoUrl) {
+            videoUrl = $item.find('link').first().text().trim() || '';
+          }
+          
+          // Try guid if it looks like a URL
+          if (!videoUrl) {
+            const guid = $item.find('guid').first().text().trim();
+            if (guid && (guid.startsWith('http://') || guid.startsWith('https://'))) {
+              videoUrl = guid;
+            }
+          }
+          
+          // Extract thumbnail
+          let thumbnailUrl = '';
+          
+          // Try media:thumbnail
+          const mediaThumbnail = $item.find('media\\:thumbnail, thumbnail').first();
+          if (mediaThumbnail.length && mediaThumbnail.attr('url')) {
+            thumbnailUrl = mediaThumbnail.attr('url') || '';
+          }
+          
+          // Try to find image in description/content
+          if (!thumbnailUrl && description) {
+            const imgMatch = description.match(/<img[^>]+src=["']([^"']+)["']/i);
+            if (imgMatch) {
+              thumbnailUrl = imgMatch[1];
+            }
+          }
+          
+          // Extract published date
+          const pubDateStr = $item.find('pubDate, published, updated').first().text().trim();
+          let publishedAt: Date | undefined;
+          if (pubDateStr) {
+            try {
+              publishedAt = new Date(pubDateStr);
+            } catch (e) {
+              publishedAt = undefined;
+            }
+          }
+          
+          if (videoUrl) {
+            videos.push({
+              title,
+              description,
+              videoUrl,
+              thumbnailUrl,
+              publishedAt
+            });
+          }
+        });
+        
+        console.log(`[RSS Parser] Cheerio fallback successful! Parsed ${videos.length} videos`);
+        
+        // Auto-generate missing thumbnails
+        const videosWithThumbnails = await Promise.all(
+          videos.map(async (video) => {
+            if (!video.thumbnailUrl && video.videoUrl) {
+              video.thumbnailUrl = await generateThumbnail(video.videoUrl);
+            }
+            return video;
+          })
+        );
+        
+        return videosWithThumbnails;
+        
+      } catch (cheerioError: any) {
+        console.error('[RSS Parser] Cheerio fallback also failed:', cheerioError);
+        console.error('[RSS Parser] Cheerio error details:', cheerioError.message);
+        // Continue with original error handling
+      }
     }
     
     const error = parseError;
