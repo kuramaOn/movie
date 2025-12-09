@@ -293,6 +293,21 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
             thumbnailUrl = mediaThumbnail.attr('url') || '';
           }
           
+          // Try custom thumbnail tags (e.g., PornHub uses <thumb_large> and <thumb>)
+          if (!thumbnailUrl) {
+            const thumbLarge = $item.find('thumb_large').first().text().trim();
+            if (thumbLarge) {
+              thumbnailUrl = thumbLarge;
+            }
+          }
+          
+          if (!thumbnailUrl) {
+            const thumb = $item.find('thumb').first().text().trim();
+            if (thumb) {
+              thumbnailUrl = thumb;
+            }
+          }
+          
           // Try to find image in description/content
           if (!thumbnailUrl && description) {
             const imgMatch = description.match(/<img[^>]+src=["']([^"']+)["']/i);
@@ -312,13 +327,24 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
             }
           }
           
+          // Extract duration (try custom tags like <duration>)
+          let duration: number | undefined;
+          const durationStr = $item.find('duration').first().text().trim();
+          if (durationStr) {
+            const durationSeconds = parseInt(durationStr, 10);
+            if (!isNaN(durationSeconds)) {
+              duration = Math.ceil(durationSeconds / 60); // Convert seconds to minutes
+            }
+          }
+          
           if (videoUrl) {
             videos.push({
               title,
               description,
               videoUrl,
               thumbnailUrl,
-              publishedAt
+              publishedAt,
+              duration
             });
           }
         });
