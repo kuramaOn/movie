@@ -38,6 +38,12 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*'
+    },
+    xml2js: {
+      strict: false, // Allow malformed XML
+      normalize: true,
+      normalizeTags: true,
+      trim: true
     }
   });
 
@@ -130,21 +136,34 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
     return videosWithThumbnails;
   } catch (parseError: any) {
     console.error('[RSS Parser] Primary parser failed, trying fallback method...');
+    console.error('[RSS Parser] Primary error:', parseError.message);
     
-    // Fallback: Try fetching with axios and parsing manually
+    // Fallback: Try fetching with axios and parsing manually with sanitization
     try {
       const response = await axios.get(url, {
         timeout: 30000,
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           'Accept': 'application/rss+xml, application/xml, text/xml, */*'
-        }
+        },
+        responseType: 'text'
       });
       
-      console.log('[RSS Parser] Fetched feed with axios, attempting manual parse...');
+      console.log('[RSS Parser] Fetched feed with axios, attempting manual parse with sanitization...');
       
-      // Try to parse the XML manually
-      const xmlData = response.data;
+      // Sanitize the XML to fix common malformed attribute issues
+      let xmlData = response.data;
+      
+      // Fix missing spaces between attributes (e.g., attribute1="value"attribute2="value")
+      // This regex finds patterns where a quote is followed directly by a letter (attribute name)
+      xmlData = xmlData.replace(/(")\s*([a-zA-Z_][\w:-]*=)/g, '$1 $2');
+      
+      // Fix other common XML issues
+      xmlData = xmlData.replace(/&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;');
+      
+      console.log('[RSS Parser] XML sanitized, attempting to parse...');
+      
+      // Try to parse the sanitized XML
       feed = await parser.parseString(xmlData);
       console.log(`[RSS Parser] Fallback successful! Parsed ${feed.items?.length || 0} items`);
       
@@ -187,6 +206,7 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
       
     } catch (fallbackError: any) {
       console.error('[RSS Parser] Fallback method also failed:', fallbackError);
+      console.error('[RSS Parser] Fallback error details:', fallbackError.message);
       // Continue with original error handling
     }
     
@@ -205,6 +225,13 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
       errorMessage = 'SSL certificate error - the feed URL may have an invalid certificate';
     } else if (error.message) {
       errorMessage = error.message;
+      
+      // Add more context for XML parsing errors
+      if (errorMessage.includes('whitespace between attributes') || 
+          errorMessage.includes('Attribute without value') ||
+          errorMessage.includes('Unexpected close tag')) {
+        errorMessage += '\n\nThe feed contains malformed XML. The feed provider needs to fix their XML syntax. Attempted automatic sanitization but the XML is too malformed to parse.';
+      }
     }
     
     throw new Error(`Failed to parse RSS feed: ${errorMessage}`);
