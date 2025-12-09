@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
-import VideoPlayer from '@/components/VideoPlayer';
+import EnhancedVideoPlayer from '@/components/EnhancedVideoPlayer';
+import RelatedVideos from '@/components/RelatedVideos';
 import ContentCard from '@/components/ContentCard';
 import prisma from '@/lib/db';
 import { StarIcon, ClockIcon, CalendarIcon } from '@heroicons/react/24/solid';
@@ -80,7 +81,11 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
     <div className="pt-16 min-h-screen">
       {/* Video Player */}
       <div className="w-full animate-fade-in">
-        <VideoPlayer videoUrl={content.videoUrl} contentId={content.id} />
+        <EnhancedVideoPlayer 
+          url={content.videoUrl} 
+          title={content.title}
+          autoPlay={false}
+        />
       </div>
 
       {/* Content Details */}
@@ -164,27 +169,13 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
             </div>
           </div>
 
-          {/* Suggestions */}
-          {suggestions.length > 0 && (
-            <div className="mt-12 space-y-6 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-              <h2 className="text-2xl font-bold">More Like This</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {suggestions.map((item, index) => (
-                  <div key={item.id} className="animate-fade-in-up" style={{ animationDelay: `${(index + 4) * 100}ms` }}>
-                    <ContentCard
-                      id={item.id}
-                      title={item.title}
-                      thumbnailUrl={item.thumbnailUrl || '/placeholder-thumbnail.jpg'}
-                      type={item.type}
-                      duration={item.duration || undefined}
-                      rating={item.rating ? Number(item.rating) : undefined}
-                      year={item.year || undefined}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Related Videos */}
+          <div className="mt-12">
+            <RelatedVideos 
+              currentContentId={content.id} 
+              genres={content.genres}
+            />
+          </div>
         </div>
       </div>
     </div>

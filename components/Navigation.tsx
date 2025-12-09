@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { MagnifyingGlassIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
+import ThemeToggle from './ThemeToggle';
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -92,6 +93,9 @@ export default function Navigation() {
             >
               <MagnifyingGlassIcon className="w-6 h-6" />
             </button>
+
+            {/* Theme Toggle */}
+            <ThemeToggle />
           </div>
 
           {/* Mobile Menu Button */}

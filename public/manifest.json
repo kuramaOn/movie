@@ -1,0 +1,56 @@
+{
+  "name": "Network Chanel - Video Streaming",
+  "short_name": "Network Chanel",
+  "description": "Your streaming platform for movies and documentaries",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#141414",
+  "theme_color": "#E50914",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["entertainment", "video"],
+  "shortcuts": [
+    {
+      "name": "Browse",
+      "url": "/browse",
+      "description": "Browse all content"
+    },
+    {
+      "name": "Movies",
+      "url": "/browse?type=movie",
+      "description": "Browse movies"
+    },
+    {
+      "name": "Documentaries",
+      "url": "/browse?type=documentary",
+      "description": "Browse documentaries"
+    }
+  ]
+}
