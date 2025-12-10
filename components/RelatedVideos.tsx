@@ -3,23 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-
-interface Content {
-  id: number;
-  title: string;
-  description: string;
-  videoUrl: string;
-  thumbnailUrl: string;
-  year: number;
-  duration: number;
-  rating: number;
-  genres: Array<{
-    genre: {
-      id: number;
-      name: string;
-    };
-  }>;
-}
+import { Content } from '@/types/content';
 
 interface RelatedVideosProps {
   currentContentId: number;

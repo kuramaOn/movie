@@ -4,15 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-
-interface Content {
-  id: number;
-  title: string;
-  type: string;
-  thumbnailUrl: string | null;
-  viewCount: number;
-  genres: Array<{ genre: { name: string } }>;
-}
+import { Content } from '@/types/content';
 
 export default function ContentManagement() {
   const [contents, setContents] = useState<Content[]>([]);

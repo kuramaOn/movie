@@ -7,24 +7,7 @@ import ContentCarousel from '@/components/ContentCarousel';
 import TrendingSection from '@/components/TrendingSection';
 import QuickViewModal from '@/components/QuickViewModal';
 import RelatedVideos from '@/components/RelatedVideos';
-
-interface Content {
-  id: number;
-  title: string;
-  description: string;
-  type: string;
-  videoUrl: string;
-  thumbnailUrl: string;
-  year: number;
-  duration: number;
-  rating: number;
-  genres: Array<{
-    genre: {
-      id: number;
-      name: string;
-    };
-  }>;
-}
+import { Content } from '@/types/content';
 
 export default function HomePage() {
   const [featured, setFeatured] = useState<Content | null>(null);

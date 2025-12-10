@@ -2,24 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import ContentCarousel from './ContentCarousel';
-
-interface Content {
-  id: number;
-  title: string;
-  description: string;
-  videoUrl: string;
-  thumbnailUrl: string;
-  year: number;
-  duration: number;
-  rating: number;
-  viewCount: number;
-  genres: Array<{
-    genre: {
-      id: number;
-      name: string;
-    };
-  }>;
-}
+import { Content } from '@/types/content';
 
 interface TrendingSectionProps {
   onItemClick?: (item: Content) => void;

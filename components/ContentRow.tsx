@@ -3,16 +3,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import ContentCard from './ContentCard';
-
-interface Content {
-  id: number;
-  title: string;
-  thumbnailUrl: string | null;
-  type: string;
-  duration: number | null;
-  rating: any;
-  year: number | null;
-}
+import { Content } from '@/types/content';
 
 interface ContentRowProps {
   title: string;
@@ -78,7 +69,7 @@ export default function ContentRow({ title, contents }: ContentRowProps) {
                   thumbnailUrl={content.thumbnailUrl || '/placeholder-thumbnail.jpg'}
                   type={content.type}
                   duration={content.duration || undefined}
-                  rating={content.rating ? (typeof content.rating === 'object' ? content.rating.toNumber() : Number(content.rating)) : undefined}
+                  rating={content.rating ? Number(content.rating) : undefined}
                   year={content.year || undefined}
                 />
               </div>
@@ -122,7 +113,7 @@ export default function ContentRow({ title, contents }: ContentRowProps) {
                 thumbnailUrl={content.thumbnailUrl || '/placeholder-thumbnail.jpg'}
                 type={content.type}
                 duration={content.duration || undefined}
-                rating={content.rating ? (typeof content.rating === 'object' ? content.rating.toNumber() : Number(content.rating)) : undefined}
+                rating={content.rating ? Number(content.rating) : undefined}
                 year={content.year || undefined}
               />
             </div>

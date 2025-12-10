@@ -8,25 +8,7 @@ import ViewToggle from '@/components/ViewToggle';
 import QuickViewModal from '@/components/QuickViewModal';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline';
-
-interface Content {
-  id: number;
-  title: string;
-  description: string;
-  type: string;
-  videoUrl: string;
-  thumbnailUrl: string;
-  year: number;
-  duration: number;
-  rating: number;
-  viewCount: number;
-  genres: Array<{
-    genre: {
-      id: number;
-      name: string;
-    };
-  }>;
-}
+import { Content } from '@/types/content';
 
 interface Genre {
   id: number;
@@ -230,7 +212,7 @@ export default function EnhancedBrowsePage() {
                           ⭐ {item.rating.toFixed(1)}
                         </span>
                       )}
-                      {item.viewCount > 0 && (
+                      {item.viewCount && item.viewCount > 0 && (
                         <span>{item.viewCount.toLocaleString()} views</span>
                       )}
                     </div>

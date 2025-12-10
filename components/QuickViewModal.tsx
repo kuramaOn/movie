@@ -5,23 +5,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon, PlayIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import Link from 'next/link';
-
-interface Content {
-  id: number;
-  title: string;
-  description: string;
-  videoUrl: string;
-  thumbnailUrl: string;
-  year: number;
-  duration: number;
-  rating: number;
-  genres: Array<{
-    genre: {
-      id: number;
-      name: string;
-    };
-  }>;
-}
+import { Content } from '@/types/content';
 
 interface QuickViewModalProps {
   isOpen: boolean;
