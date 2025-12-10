@@ -17,26 +17,107 @@ export interface ParsedVideo {
 // RSS Proxy function to bypass geographic/IP restrictions
 async function parseRSSFeedViaProxy(url: string): Promise<ParsedVideo[]> {
   try {
-    console.log('[RSS Proxy] Fetching feed via RSS2JSON proxy...');
+    console.log('[RSS Proxy] Attempting to fetch feed with enhanced headers...');
     
-    // Use RSS2JSON free API (no API key required for basic usage)
-    const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=50`;
-    
-    const response = await axios.get(proxyUrl, {
-      timeout: 30000,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    // Try multiple strategies to bypass blocking
+    const strategies = [
+      // Strategy 1: Use RSS2JSON proxy (without count parameter to avoid API key requirement)
+      async () => {
+        console.log('[RSS Proxy] Strategy 1: RSS2JSON proxy (free tier)...');
+        const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`;
+        
+        const response = await axios.get(proxyUrl, {
+          timeout: 30000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
+        
+        console.log('[RSS Proxy] RSS2JSON response status:', response.data.status);
+        
+        if (response.data.status !== 'ok') {
+          throw new Error(`RSS2JSON error: ${response.data.message || 'Unknown error'}`);
+        }
+        
+        return response.data;
+      },
+      
+      // Strategy 2: Direct fetch with browser-like headers
+      async () => {
+        console.log('[RSS Proxy] Strategy 2: Direct fetch with enhanced headers...');
+        const response = await axios.get(url, {
+          timeout: 30000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*',
+            'Accept-Language': 'en-US,en;q=0.9,ja;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Referer': 'https://www.google.com/',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+            'DNT': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Platform': '"Windows"'
+          },
+          responseType: 'text',
+          maxRedirects: 10,
+          validateStatus: (status) => status >= 200 && status < 400
+        });
+        
+        // Check if we got HTML instead of XML
+        if (response.data.trim().toLowerCase().startsWith('<!doctype html') || 
+            response.data.trim().toLowerCase().startsWith('<html')) {
+          throw new Error('Received HTML instead of RSS feed');
+        }
+        
+        // Parse the RSS feed using rss-parser
+        const Parser = require('rss-parser');
+        const parser = new Parser({
+          customFields: {
+            item: [
+              ['media:content', 'mediaContent'],
+              ['media:thumbnail', 'mediaThumbnail'],
+              ['enclosure', 'enclosure'],
+              ['description', 'description'],
+              ['content:encoded', 'contentEncoded'],
+              ['thumb_large', 'thumbLarge'],
+              ['thumb', 'thumb'],
+              ['duration', 'duration']
+            ]
+          }
+        });
+        
+        const feed = await parser.parseString(response.data);
+        return { status: 'ok', items: feed.items };
       }
-    });
+    ];
     
-    console.log('[RSS Proxy] Response status:', response.data.status);
+    let lastError: Error | null = null;
+    let responseData: any = null;
     
-    if (response.data.status !== 'ok') {
-      throw new Error(`RSS2JSON error: ${response.data.message || 'Unknown error'}`);
+    // Try each strategy until one succeeds
+    for (const strategy of strategies) {
+      try {
+        responseData = await strategy();
+        if (responseData && responseData.status === 'ok') {
+          break;
+        }
+      } catch (error: any) {
+        console.log('[RSS Proxy] Strategy failed:', error.message);
+        lastError = error;
+      }
     }
     
-    const items = response.data.items || [];
-    console.log(`[RSS Proxy] Received ${items.length} items from proxy`);
+    if (!responseData || responseData.status !== 'ok') {
+      throw lastError || new Error('All proxy strategies failed');
+    }
+    
+    const items = responseData.items || [];
+    console.log(`[RSS Proxy] Received ${items.length} items`);
     
     const videos: ParsedVideo[] = items.map((item: any) => {
       // Extract video URL from link or enclosure
@@ -109,7 +190,19 @@ async function parseRSSFeedViaProxy(url: string): Promise<ParsedVideo[]> {
     
   } catch (error: any) {
     console.error('[RSS Proxy] Error:', error.message);
-    throw new Error(`RSS Proxy failed: ${error.message}`);
+    
+    // Provide more specific error messages
+    let errorMessage = error.message;
+    
+    if (error.response?.status === 404) {
+      errorMessage = 'RSS feed not found (404). The feed URL may be incorrect or the site may have discontinued RSS feeds. Please verify the feed URL is correct.';
+    } else if (error.response?.status === 403 || error.response?.status === 401) {
+      errorMessage = 'RSS feed access denied. The feed may require authentication or be geo-restricted.';
+    } else if (error.message?.includes('Received HTML instead of RSS feed')) {
+      errorMessage = 'Feed returned HTML instead of RSS/XML. The feed may be blocked, geo-restricted, or require authentication.';
+    }
+    
+    throw new Error(`RSS Proxy failed: ${errorMessage}`);
   }
 }
 
@@ -129,7 +222,8 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
   // RSS2JSON is a free service that can bypass geographic restrictions
   const useProxy = process.env.USE_RSS_PROXY === 'true' || 
                    url.includes('pornhub.com') || 
-                   url.includes('xvideos.com');
+                   url.includes('xvideos.com') || 
+                   url.includes('xhamster.com');
   
   if (useProxy) {
     console.log('[RSS Parser] Using RSS proxy for blocked feed');
