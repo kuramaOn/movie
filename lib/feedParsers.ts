@@ -33,19 +33,27 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
         ['media:thumbnail', 'mediaThumbnail'],
         ['enclosure', 'enclosure'],
         ['description', 'description'],
-        ['content:encoded', 'contentEncoded']
+        ['content:encoded', 'contentEncoded'],
+        ['thumb_large', 'thumbLarge'],
+        ['thumb', 'thumb'],
+        ['duration', 'duration']
       ]
     },
     timeout: 30000, // 30 second timeout for Vercel
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*'
+      'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br'
     },
     xml2js: {
       strict: false, // Allow malformed XML
       normalize: true,
       normalizeTags: true,
-      trim: true
+      trim: true,
+      explicitArray: false,
+      mergeAttrs: true,
+      ignoreAttrs: false
     }
   });
 
@@ -95,7 +103,17 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
       // Extract thumbnail
       let thumbnailUrl = '';
       
-      if ((item as any).mediaThumbnail) {
+      // Try custom PornHub tags first
+      if ((item as any).thumbLarge) {
+        thumbnailUrl = (item as any).thumbLarge;
+      }
+      
+      if (!thumbnailUrl && (item as any).thumb) {
+        thumbnailUrl = (item as any).thumb;
+      }
+      
+      // Try media:thumbnail
+      if (!thumbnailUrl && (item as any).mediaThumbnail) {
         const mediaThumbnail = (item as any).mediaThumbnail;
         if (Array.isArray(mediaThumbnail)) {
           thumbnailUrl = mediaThumbnail[0]?.$ ? mediaThumbnail[0].$.url : mediaThumbnail[0];
@@ -113,12 +131,23 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
         const imgMatch = item.content.match(/<img[^>]+src=["']([^"']+)["']/i);
         if (imgMatch) thumbnailUrl = imgMatch[1];
       }
+      
+      // Extract duration if available
+      let duration: number | undefined;
+      if ((item as any).duration) {
+        const durationStr = (item as any).duration;
+        const durationSeconds = parseInt(durationStr, 10);
+        if (!isNaN(durationSeconds)) {
+          duration = Math.ceil(durationSeconds / 60); // Convert seconds to minutes
+        }
+      }
 
       return {
         title: item.title || 'Untitled',
         description: item.contentSnippet || item.content || '',
         videoUrl: videoUrl,
         thumbnailUrl: thumbnailUrl,
+        duration: duration,
         publishedAt: item.pubDate ? new Date(item.pubDate) : undefined,
       };
     }).filter(item => item.videoUrl);
@@ -149,12 +178,17 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
         timeout: 30000,
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+          'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+          'Accept-Language': 'en-US,en;q=0.9'
         },
-        responseType: 'text'
+        responseType: 'text',
+        maxRedirects: 5,
+        validateStatus: (status) => status >= 200 && status < 400
       });
       
       console.log('[RSS Parser] Fetched feed with axios, attempting manual parse with sanitization...');
+      console.log('[RSS Parser] Response content-type:', response.headers['content-type']);
+      console.log('[RSS Parser] Response preview (first 500 chars):', response.data.substring(0, 500));
       
       // Sanitize the XML to fix common malformed attribute issues
       let xmlData = response.data;
@@ -232,15 +266,28 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             'Accept': 'application/rss+xml, application/xml, text/xml, */*'
           },
-          responseType: 'text'
+          responseType: 'text',
+          maxRedirects: 5,
+          validateStatus: (status) => status >= 200 && status < 400
         });
+        
+        // Log first 500 chars of response to debug
+        console.log('[RSS Parser] Response preview:', response.data.substring(0, 500));
+        console.log('[RSS Parser] Response content-type:', response.headers['content-type']);
         
         const $ = cheerio.load(response.data, { xmlMode: true });
         const items = $('item, entry');
         
         if (items.length === 0) {
-          console.log('[RSS Parser] Cheerio fallback found no items');
-          throw new Error('No items found in feed');
+          console.log('[RSS Parser] Cheerio fallback found no items with standard selectors');
+          console.log('[RSS Parser] Trying alternate selectors...');
+          
+          // Try to find any video-like items with different selectors
+          const alternateItems = $('video, [class*="video"], [id*="video"]');
+          if (alternateItems.length === 0) {
+            console.log('[RSS Parser] No items found with alternate selectors either');
+            throw new Error('No items found in feed');
+          }
         }
         
         console.log(`[RSS Parser] Cheerio found ${items.length} items`);
@@ -374,7 +421,143 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
       } catch (cheerioError: any) {
         console.error('[RSS Parser] Cheerio fallback also failed:', cheerioError);
         console.error('[RSS Parser] Cheerio error details:', cheerioError.message);
-        // Continue with original error handling
+        
+        // Fourth fallback: Try manual XML parsing with xml2js directly
+        try {
+          console.log('[RSS Parser] Trying fourth fallback with xml2js directly...');
+          const response = await axios.get(url, {
+            timeout: 30000,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Accept': '*/*',
+              'Accept-Language': 'en-US,en;q=0.9',
+              'Referer': 'https://www.google.com/'
+            },
+            responseType: 'text',
+            maxRedirects: 10,
+            validateStatus: () => true // Accept any status
+          });
+          
+          console.log('[RSS Parser] Response status:', response.status);
+          console.log('[RSS Parser] Response content-type:', response.headers['content-type']);
+          console.log('[RSS Parser] Response length:', response.data.length);
+          console.log('[RSS Parser] Response preview (first 1000 chars):', response.data.substring(0, 1000));
+          
+          if (response.status !== 200) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          // Check if response is HTML (blocked/error page)
+          if (response.data.trim().toLowerCase().startsWith('<!doctype html') || 
+              response.data.trim().toLowerCase().startsWith('<html')) {
+            throw new Error('Feed returned HTML instead of XML/RSS - the feed may be blocked or require authentication');
+          }
+          
+          // Try to parse with xml2js directly with very lenient options
+          const result = await parseStringPromise(response.data, {
+            strict: false,
+            normalize: true,
+            normalizeTags: true,
+            trim: true,
+            explicitArray: false,
+            mergeAttrs: true,
+            ignoreAttrs: false,
+            emptyTag: () => ''
+          });
+          
+          console.log('[RSS Parser] xml2js parsed successfully, extracting items...');
+          
+          // Try to find items in various locations
+          let items: any[] = [];
+          
+          if (result.rss?.channel?.item) {
+            items = Array.isArray(result.rss.channel.item) ? result.rss.channel.item : [result.rss.channel.item];
+          } else if (result.feed?.entry) {
+            items = Array.isArray(result.feed.entry) ? result.feed.entry : [result.feed.entry];
+          } else if (result.channel?.item) {
+            items = Array.isArray(result.channel.item) ? result.channel.item : [result.channel.item];
+          }
+          
+          if (items.length === 0) {
+            console.log('[RSS Parser] No items found in parsed XML structure');
+            console.log('[RSS Parser] Parsed structure keys:', Object.keys(result));
+            throw new Error('No items found in feed');
+          }
+          
+          console.log(`[RSS Parser] Found ${items.length} items in xml2js parse`);
+          
+          const videos: ParsedVideo[] = items.map((item: any) => {
+            // Extract title
+            const title = item.title || item.name || 'Untitled';
+            
+            // Extract description
+            const description = item.description || item.summary || item.content || '';
+            
+            // Extract video URL
+            let videoUrl = item.link || item.guid || '';
+            
+            if (!videoUrl && item.enclosure) {
+              videoUrl = typeof item.enclosure === 'string' ? item.enclosure : item.enclosure.url;
+            }
+            
+            // Extract thumbnail
+            let thumbnailUrl = item.thumb_large || item.thumblarge || 
+                             item.thumb || item.thumbnail || 
+                             item['media:thumbnail'] || '';
+            
+            if (typeof thumbnailUrl === 'object' && thumbnailUrl.url) {
+              thumbnailUrl = thumbnailUrl.url;
+            }
+            
+            // Extract duration
+            let duration: number | undefined;
+            if (item.duration) {
+              const durationSeconds = parseInt(item.duration, 10);
+              if (!isNaN(durationSeconds)) {
+                duration = Math.ceil(durationSeconds / 60);
+              }
+            }
+            
+            // Extract date
+            let publishedAt: Date | undefined;
+            if (item.pubdate || item.pubDate || item.published) {
+              try {
+                publishedAt = new Date(item.pubdate || item.pubDate || item.published);
+              } catch (e) {
+                publishedAt = undefined;
+              }
+            }
+            
+            return {
+              title,
+              description,
+              videoUrl,
+              thumbnailUrl,
+              duration,
+              publishedAt
+            };
+          }).filter(v => v.videoUrl);
+          
+          console.log(`[RSS Parser] xml2js fallback successful! Parsed ${videos.length} videos`);
+          
+          // Convert URLs and generate thumbnails
+          const videosWithThumbnails = await Promise.all(
+            videos.map(async (video) => {
+              video.videoUrl = convertToEmbeddableUrl(video.videoUrl);
+              if (!video.thumbnailUrl && video.videoUrl) {
+                video.thumbnailUrl = await generateThumbnail(video.videoUrl);
+              }
+              return video;
+            })
+          );
+          
+          return videosWithThumbnails;
+          
+        } catch (xml2jsError: any) {
+          console.error('[RSS Parser] xml2js fallback also failed:', xml2jsError);
+          console.error('[RSS Parser] xml2js error details:', xml2jsError.message);
+          // Continue with original error handling
+        }
       }
     }
     
