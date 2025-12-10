@@ -124,7 +124,7 @@ export default function EnhancedBrowsePage() {
           >
             <option value="">All Genres</option>
             {genres.map((genre) => (
-              <option key={genre.id} value={genre.slug}>
+              <option key={genre.id} value={genre.id.toString()}>
                 {genre.name}
               </option>
             ))}
