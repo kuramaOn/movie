@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AdminLayout from '@/components/AdminLayout';
-import { MagnifyingGlassIcon, RssIcon, GlobeAltIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import FeedTemplateSelector from '@/components/FeedTemplateSelector';
+import { FeedTemplate } from '@/lib/feedTemplates';
+import { MagnifyingGlassIcon, RssIcon, GlobeAltIcon, CheckCircleIcon, SparklesIcon } from '@heroicons/react/24/outline';
 
 interface DiscoveredFeed {
   url: string;
@@ -20,10 +22,12 @@ export default function AddFeed() {
   const [selectedFeed, setSelectedFeed] = useState<DiscoveredFeed | null>(null);
   const [isDiscovering, setIsDiscovering] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     autoSync: true,
     syncInterval: 24,
+    apiKey: '',
   });
 
   // Step 1: Discover feeds from website
@@ -68,6 +72,23 @@ export default function AddFeed() {
     }
   };
 
+  // Handle template selection
+  const handleSelectTemplate = (template: FeedTemplate) => {
+    setShowTemplateSelector(false);
+    setSelectedFeed({
+      url: template.urlPlaceholder,
+      title: template.name,
+      type: template.type,
+    });
+    setFormData({
+      name: template.name,
+      autoSync: template.defaultAutoSync,
+      syncInterval: template.defaultSyncInterval,
+      apiKey: '',
+    });
+    setStep(3);
+  };
+
   // Step 2: Select feed and configure
   const handleSelectFeed = (feed: DiscoveredFeed) => {
     setSelectedFeed(feed);
@@ -93,6 +114,7 @@ export default function AddFeed() {
           type: selectedFeed?.type,
           autoSync: formData.autoSync,
           syncInterval: formData.syncInterval,
+          apiKey: formData.apiKey || undefined,
         }),
       });
 
@@ -120,11 +142,20 @@ export default function AddFeed() {
       name: '',
       autoSync: true,
       syncInterval: 24,
+      apiKey: '',
     });
   };
 
   return (
     <AdminLayout>
+      {/* Template Selector Modal */}
+      {showTemplateSelector && (
+        <FeedTemplateSelector
+          onSelectTemplate={handleSelectTemplate}
+          onClose={() => setShowTemplateSelector(false)}
+        />
+      )}
+
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -155,6 +186,35 @@ export default function AddFeed() {
               <GlobeAltIcon className="w-16 h-16 text-netflix-red mx-auto mb-4" />
               <h2 className="text-2xl font-bold mb-2">Discover RSS Feeds</h2>
               <p className="text-gray-400">Enter any website URL and we'll discover RSS feeds automatically</p>
+            </div>
+
+            {/* Quick Templates Button */}
+            <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30 rounded-lg p-6 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <SparklesIcon className="w-8 h-8 text-purple-400" />
+                  <div>
+                    <h3 className="font-bold text-lg">Use a Template</h3>
+                    <p className="text-sm text-gray-400">Quick setup for PornHub, XVideos, YouTube, and more!</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowTemplateSelector(true)}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 flex items-center space-x-2"
+                >
+                  <SparklesIcon className="w-5 h-5" />
+                  <span>Browse Templates</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-700"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-netflix-gray text-gray-400">OR ENTER URL MANUALLY</span>
+              </div>
             </div>
 
             <div>
@@ -287,15 +347,56 @@ export default function AddFeed() {
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Feed URL
+                Feed URL *
+              </label>
+              <input
+                type="url"
+                value={selectedFeed.url}
+                onChange={(e) => setSelectedFeed({ ...selectedFeed, url: e.target.value })}
+                className="w-full px-4 py-3 bg-netflix-light-gray border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-netflix-red"
+                placeholder="Enter or edit feed URL"
+                required
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                You can edit the URL if needed
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Feed Type
               </label>
               <input
                 type="text"
-                value={selectedFeed.url}
+                value={selectedFeed.type.toUpperCase().replace('_', ' ')}
                 className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded text-gray-500 cursor-not-allowed"
                 disabled
               />
             </div>
+
+            {/* API Key Field (if needed) */}
+            {(selectedFeed.type === 'youtube_channel' || 
+              selectedFeed.type === 'youtube_playlist' || 
+              selectedFeed.type === 'vimeo') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  API Key {selectedFeed.type.includes('youtube') ? '(YouTube Data API v3)' : '(Vimeo Access Token)'} *
+                </label>
+                <input
+                  type="text"
+                  value={formData.apiKey}
+                  onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+                  className="w-full px-4 py-3 bg-netflix-light-gray border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-netflix-red"
+                  placeholder={selectedFeed.type.includes('youtube') ? 'AIzaSy...' : 'Enter Vimeo access token'}
+                  required
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  {selectedFeed.type.includes('youtube') 
+                    ? 'Get your API key from Google Cloud Console'
+                    : 'Get your access token from Vimeo Developer settings'}
+                </p>
+              </div>
+            )}
 
             <div className="flex items-center space-x-3">
               <input
