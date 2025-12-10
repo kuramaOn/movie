@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { SparklesIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import AdminLayout from '@/components/AdminLayout';
 
 interface Genre {
   id: number;
@@ -170,7 +171,7 @@ export default function AddContent() {
   };
 
   return (
-    <div className="pt-24 px-4 md:px-12 min-h-screen">
+    <AdminLayout>
       {/* Toast Notification */}
       {showToast && (
         <div className={`fixed top-20 right-4 z-50 flex items-center space-x-3 px-6 py-4 rounded-lg border backdrop-blur-md shadow-lg animate-slide-in-right ${
@@ -182,7 +183,7 @@ export default function AddContent() {
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="space-y-6">
         <div className="flex items-center justify-between animate-fade-in-down">
           <h1 className="text-3xl md:text-4xl font-bold">Add Content</h1>
           <Link
@@ -393,6 +394,6 @@ export default function AddContent() {
           </div>
         </form>
       </div>
-    </div>
+    </AdminLayout>
   );
 }

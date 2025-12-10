@@ -25,6 +25,7 @@ module.exports = {
         'shake': 'shake 0.5s ease-in-out',
         'float': 'float 3s ease-in-out infinite',
         'shimmer': 'shimmer 2s infinite',
+        'parallax': 'parallax 1s ease-out',
       },
       keyframes: {
         fadeIn: {
@@ -63,6 +64,10 @@ module.exports = {
         shimmer: {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(100%)' },
+        },
+        parallax: {
+          '0%': { transform: 'translateY(0px)' },
+          '100%': { transform: 'translateY(-20px)' },
         },
       },
     },

@@ -47,17 +47,17 @@ export default function ContentCarousel({ title, items, onItemClick }: ContentCa
           {items.map((item) => (
             <div
               key={item.id}
-              className="min-w-[200px] md:min-w-[250px] group/item cursor-pointer"
+              className="min-w-[280px] md:min-w-[350px] group/item cursor-pointer"
               onClick={() => onItemClick && onItemClick(item)}
             >
               <Link href={`/watch/${item.id}`} className="block">
-                <div className="relative aspect-[2/3] rounded-lg overflow-hidden transition-transform group-hover/item:scale-105">
+                <div className="relative aspect-video rounded-lg overflow-hidden transition-transform group-hover/item:scale-105 shadow-lg hover:shadow-netflix-red/20">
                   <Image
                     src={item.thumbnailUrl || '/placeholder-thumbnail.jpg'}
                     alt={item.title}
                     fill
                     className="object-cover"
-                    sizes="250px"
+                    sizes="(max-width: 768px) 280px, 350px"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover/item:opacity-100 transition-opacity">
                     <div className="absolute bottom-0 left-0 right-0 p-4">

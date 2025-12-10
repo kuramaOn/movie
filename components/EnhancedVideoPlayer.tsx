@@ -14,6 +14,7 @@ import {
 } from '@heroicons/react/24/solid';
 import { RectangleStackIcon } from '@heroicons/react/24/outline';
 import { convertToEmbeddableUrl, getVideoSourceInfo, isDirectVideoFile } from '@/lib/videoUrlConverter';
+import VideoEndScreen from './VideoEndScreen';
 
 interface EnhancedVideoPlayerProps {
   url: string;
@@ -21,6 +22,8 @@ interface EnhancedVideoPlayerProps {
   onEnded?: () => void;
   nextVideoUrl?: string;
   autoPlay?: boolean;
+  nextVideo?: any;
+  relatedVideos?: any[];
 }
 
 export default function EnhancedVideoPlayer({
@@ -29,6 +32,8 @@ export default function EnhancedVideoPlayer({
   onEnded,
   nextVideoUrl,
   autoPlay = false,
+  nextVideo,
+  relatedVideos = [],
 }: EnhancedVideoPlayerProps) {
   const playerRef = useRef<ReactPlayer>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -53,6 +58,8 @@ export default function EnhancedVideoPlayer({
   const [quality, setQuality] = useState('auto');
   const [showSettings, setShowSettings] = useState(false);
   const [buffering, setBuffering] = useState(false);
+  const [showEndScreen, setShowEndScreen] = useState(false);
+  const [hasEnded, setHasEnded] = useState(false);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -163,6 +170,37 @@ export default function EnhancedVideoPlayer({
 
   const handleProgress = (state: { played: number; playedSeconds: number; loaded: number; loadedSeconds: number }) => {
     setPlayed(state.played);
+    // Reset end screen if user seeks back
+    if (hasEnded && state.played < 0.95) {
+      setHasEnded(false);
+      setShowEndScreen(false);
+    }
+  };
+
+  const handleVideoEnded = () => {
+    setHasEnded(true);
+    setShowEndScreen(true);
+    setPlaying(false);
+    if (onEnded) {
+      onEnded();
+    }
+  };
+
+  const handleReplay = () => {
+    setShowEndScreen(false);
+    setHasEnded(false);
+    setPlayed(0);
+    playerRef.current?.seekTo(0);
+    setPlaying(true);
+  };
+
+  const handleCloseEndScreen = () => {
+    setShowEndScreen(false);
+  };
+
+  const handleSaveToWatchlist = () => {
+    // TODO: Implement watchlist functionality
+    alert('Saved to Watchlist! (Feature coming soon)');
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -201,6 +239,15 @@ export default function EnhancedVideoPlayer({
             allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
             sandbox="allow-same-origin allow-scripts allow-presentation"
             title={title || 'Video Player'}
+            style={{ pointerEvents: 'auto' }}
+          />
+          {/* Transparent overlay to prevent external link clicks while allowing video controls */}
+          <div 
+            className="absolute inset-0 pointer-events-none"
+            style={{ 
+              background: 'transparent',
+              zIndex: 1
+            }}
           />
         </div>
         
@@ -252,7 +299,7 @@ export default function EnhancedVideoPlayer({
           height="100%"
           onProgress={handleProgress}
           onDuration={setDuration}
-          onEnded={onEnded}
+          onEnded={handleVideoEnded}
           onBuffer={() => setBuffering(true)}
           onBufferEnd={() => setBuffering(false)}
           config={{
@@ -433,6 +480,20 @@ export default function EnhancedVideoPlayer({
             </div>
           </div>
         </div>
+
+        {/* Video End Screen */}
+        {showEndScreen && (
+          <VideoEndScreen
+            show={showEndScreen}
+            onReplay={handleReplay}
+            onClose={handleCloseEndScreen}
+            nextVideo={nextVideo}
+            relatedVideos={relatedVideos}
+            onSaveToWatchlist={handleSaveToWatchlist}
+            autoPlayNext={true}
+            countdownSeconds={10}
+          />
+        )}
       </div>
 
       {/* Keyboard Shortcuts Help */}

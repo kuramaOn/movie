@@ -62,7 +62,7 @@ export default function ContentRow({ title, contents }: ContentRowProps) {
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {contents.slice(0, 6).map((content) => (
-              <div key={content.id} className="flex-shrink-0 w-64 md:w-80">
+              <div key={content.id} className="flex-shrink-0 w-72 md:w-96">
                 <ContentCard
                   id={content.id}
                   title={content.title}
@@ -104,7 +104,7 @@ export default function ContentRow({ title, contents }: ContentRowProps) {
           {contents.map((content, index) => (
             <div 
               key={content.id} 
-              className="flex-shrink-0 w-64 md:w-80 animate-fade-in"
+              className="flex-shrink-0 w-72 md:w-96 animate-fade-in"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <ContentCard

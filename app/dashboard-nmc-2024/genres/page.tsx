@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import AdminLayout from '@/components/AdminLayout';
 
 interface Genre {
   id: number;
@@ -98,8 +99,8 @@ export default function GenreManagement() {
   };
 
   return (
-    <div className="pt-24 px-4 md:px-12 min-h-screen">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <AdminLayout>
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-3xl md:text-4xl font-bold">Genre Management</h1>
@@ -216,6 +217,6 @@ export default function GenreManagement() {
           </div>
         )}
       </div>
-    </div>
+    </AdminLayout>
   );
 }

@@ -163,7 +163,17 @@ export default function VideoPlayer({ videoUrl, contentId }: VideoPlayerProps) {
           frameBorder="0"
           allow="autoplay; fullscreen; picture-in-picture"
           allowFullScreen
+          sandbox="allow-same-origin allow-scripts allow-presentation"
           title="Video Player"
+          style={{ pointerEvents: 'auto' }}
+        />
+        {/* Transparent overlay to prevent external link clicks */}
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{ 
+            background: 'transparent',
+            zIndex: 1
+          }}
         />
       </div>
     );

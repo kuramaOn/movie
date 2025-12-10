@@ -150,6 +150,46 @@ export const convertToEmbeddableUrl = (url: string): string => {
     }
   }
   
+  // Vidoza
+  if (urlLower.includes('vidoza.net')) {
+    if (url.includes('/embed-')) return url;
+    
+    const videoIdMatch = url.match(/\/([a-zA-Z0-9]+)\.html/);
+    if (videoIdMatch) {
+      return `https://vidoza.net/embed-${videoIdMatch[1]}.html`;
+    }
+  }
+  
+  // Streamtape
+  if (urlLower.includes('streamtape.com')) {
+    if (url.includes('/e/')) return url;
+    
+    const videoIdMatch = url.match(/\/v\/([a-zA-Z0-9]+)/);
+    if (videoIdMatch) {
+      return `https://streamtape.com/e/${videoIdMatch[1]}`;
+    }
+  }
+  
+  // Doodstream
+  if (urlLower.includes('doodstream.com') || urlLower.includes('dood.')) {
+    if (url.includes('/e/')) return url;
+    
+    const videoIdMatch = url.match(/\/d\/([a-zA-Z0-9]+)/);
+    if (videoIdMatch) {
+      return `https://doodstream.com/e/${videoIdMatch[1]}`;
+    }
+  }
+  
+  // Mixdrop
+  if (urlLower.includes('mixdrop.')) {
+    if (url.includes('/e/')) return url;
+    
+    const videoIdMatch = url.match(/\/f\/([a-zA-Z0-9]+)/);
+    if (videoIdMatch) {
+      return `https://mixdrop.co/e/${videoIdMatch[1]}`;
+    }
+  }
+  
   // If no conversion rule matches, return original URL
   return url;
 };
@@ -175,6 +215,10 @@ export const getVideoSourceInfo = (url: string): VideoSource => {
   else if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) platform = 'YouTube';
   else if (urlLower.includes('vimeo.com')) platform = 'Vimeo';
   else if (urlLower.includes('dailymotion.com')) platform = 'Dailymotion';
+  else if (urlLower.includes('vidoza.net')) platform = 'Vidoza';
+  else if (urlLower.includes('streamtape.com')) platform = 'Streamtape';
+  else if (urlLower.includes('doodstream.com') || urlLower.includes('dood.')) platform = 'Doodstream';
+  else if (urlLower.includes('mixdrop.')) platform = 'Mixdrop';
   else if (url.match(/\.(mp4|webm|ogg|mov|avi|mkv|m3u8)$/i)) {
     platform = 'Direct Video';
     requiresIframe = false;

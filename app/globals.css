@@ -96,12 +96,27 @@ html {
   }
 }
 
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .animate-fadeIn {
   animation: fadeIn 0.5s ease-in-out;
 }
 
 .animate-fade-in {
   animation: fadeIn 0.5s ease-in-out;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
 }
 
 /* Loading skeleton */
@@ -141,6 +156,40 @@ html {
 
 .video-player:hover .video-controls {
   opacity: 1;
+}
+
+/* Prevent external iframe links and overlays from being clickable */
+iframe[src*="pornhub"],
+iframe[src*="xvideos"],
+iframe[src*="xhamster"],
+iframe[src*="redtube"],
+iframe[src*="youporn"],
+iframe[src*="tube8"],
+iframe[src*="spankbang"],
+iframe[src*="dailymotion"],
+iframe[src*="vidwo"],
+iframe[src*="vidoza"],
+iframe[src*="streamtape"],
+iframe[src*="doodstream"],
+iframe[src*="dood."],
+iframe[src*="mixdrop"] {
+  pointer-events: auto;
+}
+
+/* Block clicks on iframe overlays to prevent external navigation */
+.video-iframe-container {
+  position: relative;
+}
+
+.video-iframe-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Custom button styles */

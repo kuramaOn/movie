@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import AdminLayout from '@/components/AdminLayout';
 
 interface PreviewVideo {
   title: string;
@@ -151,8 +152,8 @@ export default function PreviewFeed({ params }: { params: { id: string } }) {
   };
 
   return (
-    <div className="pt-24 px-4 md:px-12 min-h-screen">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <AdminLayout>
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl md:text-4xl font-bold">Preview Feed</h1>
           <Link
@@ -281,6 +282,6 @@ export default function PreviewFeed({ params }: { params: { id: string } }) {
           </>
         )}
       </div>
-    </div>
+    </AdminLayout>
   );
 }

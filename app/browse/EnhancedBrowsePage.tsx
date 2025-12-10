@@ -152,20 +152,20 @@ export default function EnhancedBrowsePage() {
       ) : filteredContent.length > 0 ? (
         <>
           {view === 'grid' ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredContent.map((item) => (
                 <div
                   key={item.id}
                   className="group cursor-pointer"
                   onClick={() => handleQuickView(item)}
                 >
-                  <div className="relative aspect-[2/3] rounded-lg overflow-hidden transition-transform group-hover:scale-105">
+                  <div className="relative aspect-video rounded-lg overflow-hidden transition-transform group-hover:scale-105 shadow-lg hover:shadow-netflix-red/30">
                     <Image
                       src={item.thumbnailUrl || '/placeholder-thumbnail.jpg'}
                       alt={item.title}
                       fill
                       className="object-cover"
-                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 20vw"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="absolute bottom-0 left-0 right-0 p-4">

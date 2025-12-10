@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import EnhancedVideoPlayer from '@/components/EnhancedVideoPlayer';
 import RelatedVideos from '@/components/RelatedVideos';
 import ContentCard from '@/components/ContentCard';
+import LayoutSwitcher from '@/components/LayoutSwitcher';
 import prisma from '@/lib/db';
 import { StarIcon, ClockIcon, CalendarIcon } from '@heroicons/react/24/solid';
 import { formatDuration } from '@/lib/utils';
@@ -79,12 +80,17 @@ export default async function WatchPage({ params }: { params: { id: string } }) 
 
   return (
     <div className="pt-16 min-h-screen">
+      {/* Layout Switcher */}
+      <LayoutSwitcher contentId={content.id} />
+      
       {/* Video Player */}
       <div className="w-full animate-fade-in">
         <EnhancedVideoPlayer 
           url={content.videoUrl} 
           title={content.title}
           autoPlay={false}
+          nextVideo={suggestions[0]}
+          relatedVideos={suggestions}
         />
       </div>
 

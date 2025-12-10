@@ -41,39 +41,41 @@ export default function HomePage() {
 
   return (
     <div className="pt-16">
-      {/* Hero Section */}
+      {/* Hero Section - 16:9 Landscape Banner */}
       {featured && (
-        <div className="relative h-[80vh] mb-8">
-          <Image
-            src={featured.thumbnailUrl || '/placeholder-thumbnail.jpg'}
-            alt={featured.title}
-            fill
-            className="object-cover"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-netflix-black via-netflix-black/60 to-transparent">
-            <div className="absolute bottom-0 left-0 right-0 px-4 md:px-12 pb-20">
-              <h1 className="text-4xl md:text-6xl font-bold mb-4 animate-fade-in-up">
-                {featured.title}
-              </h1>
-              {featured.description && (
-                <p className="text-lg md:text-xl text-gray-300 max-w-2xl mb-6 line-clamp-3 animate-fade-in-up">
-                  {featured.description}
-                </p>
-              )}
-              <div className="flex space-x-4 animate-fade-in-up">
-                <Link
-                  href={`/watch/${featured.id}`}
-                  className="bg-white text-black font-semibold px-8 py-3 rounded hover:bg-gray-200 transition"
-                >
-                  ▶ Play
-                </Link>
-                <Link
-                  href={`/watch/${featured.id}`}
-                  className="bg-gray-500/70 text-white font-semibold px-8 py-3 rounded hover:bg-gray-500 transition"
-                >
-                  ⓘ More Info
-                </Link>
+        <div className="relative w-full mb-8">
+          <div className="relative w-full aspect-video max-h-[85vh]">
+            <Image
+              src={featured.thumbnailUrl || '/placeholder-thumbnail.jpg'}
+              alt={featured.title}
+              fill
+              className="object-cover"
+              priority
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-netflix-black via-netflix-black/60 to-transparent">
+              <div className="absolute bottom-0 left-0 right-0 px-4 md:px-12 pb-12 md:pb-20">
+                <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 animate-fade-in-up">
+                  {featured.title}
+                </h1>
+                {featured.description && (
+                  <p className="text-base md:text-lg text-gray-300 max-w-2xl mb-6 line-clamp-2 md:line-clamp-3 animate-fade-in-up">
+                    {featured.description}
+                  </p>
+                )}
+                <div className="flex space-x-4 animate-fade-in-up">
+                  <Link
+                    href={`/watch/${featured.id}`}
+                    className="bg-white text-black font-semibold px-6 py-2.5 md:px-8 md:py-3 rounded hover:bg-gray-200 transition"
+                  >
+                    ▶ Play
+                  </Link>
+                  <Link
+                    href={`/watch/${featured.id}`}
+                    className="bg-gray-500/70 text-white font-semibold px-6 py-2.5 md:px-8 md:py-3 rounded hover:bg-gray-500 transition"
+                  >
+                    ⓘ More Info
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

@@ -8,7 +8,9 @@ import {
   DocumentTextIcon,
   EyeIcon as EyeIconSolid,
   RssIcon,
+  ArrowTrendingUpIcon,
 } from '@heroicons/react/24/solid';
+import AdminLayout from '@/components/AdminLayout';
 
 interface Stats {
   totalContent: number;
@@ -171,112 +173,108 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-netflix-black pt-24 px-4 md:px-12">
-        <div className="animate-pulse space-y-8">
-          <div className="h-8 bg-netflix-light-gray rounded w-64"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-32 bg-netflix-light-gray rounded"></div>
+      <AdminLayout>
+        <div className="space-y-6">
+          <div className="h-8 bg-gray-700 rounded w-64 animate-pulse"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-32 bg-gray-800 rounded animate-pulse"></div>
             ))}
           </div>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-netflix-black">
-      {/* Admin Header */}
-      <header className="bg-black/50 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50 animate-fade-in-down">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-white">
-            <span className="text-netflix-red">NETWORK CHANEL</span> Dashboard
-          </h1>
-          <button
-            onClick={onLogout}
-            className="px-4 py-2 bg-netflix-red hover:bg-red-700 text-white rounded-lg transition-all duration-300 transform hover:scale-105"
-          >
-            Logout
-          </button>
+    <AdminLayout>
+      <div className="space-y-6">
+        {/* Welcome Section */}
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">Dashboard Overview</h1>
+          <p className="text-gray-400">Welcome back! Here's what's happening with your platform.</p>
         </div>
-      </header>
 
-      {/* Admin Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           {[
-            { title: 'Total Content', value: stats?.totalContent || 0, icon: FilmIcon, color: 'text-netflix-red' },
-            { title: 'Movies', value: stats?.totalMovies || 0, icon: FilmIcon, color: 'text-blue-500' },
-            { title: 'Documentaries', value: stats?.totalDocumentaries || 0, icon: DocumentTextIcon, color: 'text-green-500' },
-            { title: 'Total Views', value: stats?.totalViews.toLocaleString() || 0, icon: EyeIconSolid, color: 'text-yellow-500' },
-            { title: 'Feed Sources', value: stats?.totalFeeds || 0, icon: RssIcon, color: 'text-purple-500' },
+            { title: 'Total Content', value: stats?.totalContent || 0, icon: FilmIcon, color: 'bg-red-500/20 text-red-500' },
+            { title: 'Movies', value: stats?.totalMovies || 0, icon: FilmIcon, color: 'bg-blue-500/20 text-blue-500' },
+            { title: 'Documentaries', value: stats?.totalDocumentaries || 0, icon: DocumentTextIcon, color: 'bg-green-500/20 text-green-500' },
+            { title: 'Total Views', value: stats?.totalViews.toLocaleString() || 0, icon: EyeIconSolid, color: 'bg-yellow-500/20 text-yellow-500' },
+            { title: 'Feed Sources', value: stats?.totalFeeds || 0, icon: RssIcon, color: 'bg-purple-500/20 text-purple-500' },
           ].map((stat, index) => (
             <div
               key={stat.title}
-              className="bg-netflix-gray/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-netflix-red transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-red-500/20 animate-fade-in-up"
-              style={{ animationDelay: `${index * 100}ms` }}
+              className="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-netflix-red transition-all duration-300"
             >
-              <div className="flex items-center justify-between mb-4">
-                <stat.icon className={`h-12 w-12 ${stat.color}`} />
+              <div className="flex items-start justify-between mb-4">
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${stat.color.split(' ')[0]}`}>
+                  <stat.icon className={`h-6 w-6 ${stat.color.split(' ')[1]}`} />
+                </div>
                 <span className="text-3xl font-bold text-white">{stat.value}</span>
               </div>
-              <h3 className="text-gray-400 text-sm">{stat.title}</h3>
+              <h3 className="text-gray-400 text-sm font-medium">{stat.title}</h3>
             </div>
           ))}
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {[
-            { href: '/dashboard-nmc-2024/content', icon: FilmIcon, title: 'Content Management', desc: 'Add, edit, or delete movies and documentaries', color: 'text-netflix-red' },
-            { href: '/dashboard-nmc-2024/genres', icon: DocumentTextIcon, title: 'Genre Management', desc: 'Manage content genres and categories', color: 'text-green-500' },
-            { href: '/dashboard-nmc-2024/feeds', icon: RssIcon, title: 'Feed Import', desc: 'Import content from RSS feeds and APIs', color: 'text-purple-500' },
-          ].map((action, index) => (
-            <Link
-              key={action.title}
-              href={action.href}
-              className="bg-netflix-gray p-6 rounded-lg hover:bg-netflix-light-gray transition-all duration-300 group animate-fade-in-up"
-              style={{ animationDelay: `${(index + 5) * 100}ms` }}
-            >
-              <action.icon className={`h-12 w-12 ${action.color} mb-4 group-hover:scale-110 transition-transform duration-300`} />
-              <h3 className="text-xl font-semibold mb-2">{action.title}</h3>
-              <p className="text-gray-400">{action.desc}</p>
-            </Link>
-          ))}
+        <div>
+          <h2 className="text-xl font-bold text-white mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[
+              { href: '/dashboard-nmc-2024/content', icon: FilmIcon, title: 'Manage Content', desc: 'Add or edit videos', color: 'bg-red-500/20 text-red-500' },
+              { href: '/dashboard-nmc-2024/feeds', icon: RssIcon, title: 'Import Feeds', desc: 'Sync from sources', color: 'bg-purple-500/20 text-purple-500' },
+              { href: '/dashboard-nmc-2024/genres', icon: DocumentTextIcon, title: 'Manage Genres', desc: 'Edit categories', color: 'bg-green-500/20 text-green-500' },
+            ].map((action) => (
+              <Link
+                key={action.title}
+                href={action.href}
+                className="bg-gray-800 p-6 rounded-lg border border-gray-700 hover:border-netflix-red transition-all duration-300 group"
+              >
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${action.color.split(' ')[0]} group-hover:scale-110 transition-transform`}>
+                  <action.icon className={`h-6 w-6 ${action.color.split(' ')[1]}`} />
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-1">{action.title}</h3>
+                <p className="text-sm text-gray-400">{action.desc}</p>
+              </Link>
+            ))}
+          </div>
         </div>
 
-        {/* Recent Uploads */}
+        {/* Recent Activity */}
         {stats?.recentUploads && stats.recentUploads.length > 0 && (
-          <div className="bg-netflix-gray p-6 rounded-lg animate-fade-in-up" style={{ animationDelay: '800ms' }}>
-            <h2 className="text-2xl font-bold mb-4">Recent Uploads</h2>
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h2 className="text-xl font-bold text-white mb-4">Recent Uploads</h2>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead>
-                  <tr className="text-left border-b border-netflix-light-gray">
-                    <th className="pb-3">Title</th>
-                    <th className="pb-3">Type</th>
-                    <th className="pb-3">Views</th>
-                    <th className="pb-3">Date</th>
+                <thead className="bg-gray-700">
+                  <tr>
+                    <th className="text-left p-4 text-gray-300 font-semibold">Title</th>
+                    <th className="text-left p-4 text-gray-300 font-semibold">Type</th>
+                    <th className="text-left p-4 text-gray-300 font-semibold">Views</th>
+                    <th className="text-left p-4 text-gray-300 font-semibold">Date</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {stats.recentUploads.map((content, index) => (
+                  {stats.recentUploads.slice(0, 5).map((content) => (
                     <tr 
                       key={content.id} 
-                      className="border-b border-netflix-light-gray hover:bg-gray-800/50 transition-colors duration-300 animate-fade-in"
-                      style={{ animationDelay: `${(index + 10) * 50}ms` }}
+                      className="border-t border-gray-700 hover:bg-gray-750 transition"
                     >
-                      <td className="py-3">
-                        <Link href={`/watch/${content.id}`} className="hover:text-netflix-red transition">
+                      <td className="p-4">
+                        <Link href={`/watch/${content.id}`} className="text-white hover:text-netflix-red transition font-medium">
                           {content.title}
                         </Link>
                       </td>
-                      <td className="py-3">
-                        <span className="capitalize">{content.type}</span>
+                      <td className="p-4">
+                        <span className="capitalize px-3 py-1 bg-gray-700 rounded text-sm text-gray-300">
+                          {content.type}
+                        </span>
                       </td>
-                      <td className="py-3">{content.viewCount}</td>
-                      <td className="py-3 text-gray-400">
+                      <td className="p-4 text-white">{content.viewCount}</td>
+                      <td className="p-4 text-gray-400">
                         {new Date(content.createdAt).toLocaleDateString()}
                       </td>
                     </tr>
@@ -286,7 +284,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             </div>
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

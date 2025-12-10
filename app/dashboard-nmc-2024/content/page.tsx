@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { Content } from '@/types/content';
+import AdminLayout from '@/components/AdminLayout';
 
 export default function ContentManagement() {
   const [contents, setContents] = useState<Content[]>([]);
@@ -52,8 +53,8 @@ export default function ContentManagement() {
   );
 
   return (
-    <div className="pt-24 px-4 md:px-12 min-h-screen">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <AdminLayout>
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-3xl md:text-4xl font-bold">Content Management</h1>
@@ -164,6 +165,6 @@ export default function ContentManagement() {
           </div>
         )}
       </div>
-    </div>
+    </AdminLayout>
   );
 }

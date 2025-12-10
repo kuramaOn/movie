@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import AdminLayout from '@/components/AdminLayout';
 
 interface Genre {
   id: number;
@@ -112,18 +113,20 @@ export default function EditContent({ params }: { params: { id: string } }) {
 
   if (fetching) {
     return (
-      <div className="pt-24 px-4 md:px-12 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-netflix-red mx-auto"></div>
-          <p className="mt-4 text-gray-400">Loading content...</p>
+      <AdminLayout>
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-netflix-red mx-auto"></div>
+            <p className="mt-4 text-gray-400">Loading content...</p>
+          </div>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="pt-24 px-4 md:px-12 min-h-screen">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <AdminLayout>
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl md:text-4xl font-bold">Edit Content</h1>
           <Link
@@ -275,6 +278,6 @@ export default function EditContent({ params }: { params: { id: string } }) {
           </div>
         </form>
       </div>
-    </div>
+    </AdminLayout>
   );
 }

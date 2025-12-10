@@ -1,8 +1,9 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PlusIcon, TrashIcon, ArrowPathIcon, EyeIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import AdminLayout from '@/components/AdminLayout';
 
 interface Feed {
   id: number;
@@ -79,8 +80,8 @@ export default function FeedManagement() {
   };
 
   return (
-    <div className="pt-24 px-4 md:px-12 min-h-screen">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <AdminLayout>
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-3xl md:text-4xl font-bold">Feed Management</h1>
@@ -183,6 +184,6 @@ export default function FeedManagement() {
           </div>
         )}
       </div>
-    </div>
+    </AdminLayout>
   );
 }
