@@ -14,6 +14,105 @@ export interface ParsedVideo {
   publishedAt?: Date;
 }
 
+// RSS Proxy function to bypass geographic/IP restrictions
+async function parseRSSFeedViaProxy(url: string): Promise<ParsedVideo[]> {
+  try {
+    console.log('[RSS Proxy] Fetching feed via RSS2JSON proxy...');
+    
+    // Use RSS2JSON free API (no API key required for basic usage)
+    const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=50`;
+    
+    const response = await axios.get(proxyUrl, {
+      timeout: 30000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    console.log('[RSS Proxy] Response status:', response.data.status);
+    
+    if (response.data.status !== 'ok') {
+      throw new Error(`RSS2JSON error: ${response.data.message || 'Unknown error'}`);
+    }
+    
+    const items = response.data.items || [];
+    console.log(`[RSS Proxy] Received ${items.length} items from proxy`);
+    
+    const videos: ParsedVideo[] = items.map((item: any) => {
+      // Extract video URL from link or enclosure
+      let videoUrl = item.link || item.guid || '';
+      
+      if (item.enclosure && item.enclosure.link) {
+        videoUrl = item.enclosure.link;
+      }
+      
+      // Extract thumbnail
+      let thumbnailUrl = item.thumbnail || '';
+      
+      // Try to extract thumbnail from description HTML
+      if (!thumbnailUrl && item.description) {
+        const imgMatch = item.description.match(/<img[^>]+src=["']([^"']+)["']/i);
+        if (imgMatch) {
+          thumbnailUrl = imgMatch[1];
+        }
+      }
+      
+      // Try to extract thumbnail from content
+      if (!thumbnailUrl && item.content) {
+        const imgMatch = item.content.match(/<img[^>]+src=["']([^"']+)["']/i);
+        if (imgMatch) {
+          thumbnailUrl = imgMatch[1];
+        }
+      }
+      
+      // Extract duration if available
+      let duration: number | undefined;
+      if (item.duration) {
+        const durationSeconds = parseInt(item.duration, 10);
+        if (!isNaN(durationSeconds)) {
+          duration = Math.ceil(durationSeconds / 60);
+        }
+      }
+      
+      // Parse description to get clean text
+      let description = item.description || '';
+      if (description) {
+        // Remove HTML tags for cleaner description
+        description = description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      }
+      
+      return {
+        title: item.title || 'Untitled',
+        description: description,
+        videoUrl: videoUrl,
+        thumbnailUrl: thumbnailUrl,
+        duration: duration,
+        publishedAt: item.pubDate ? new Date(item.pubDate) : undefined
+      };
+    }).filter((v: ParsedVideo) => v.videoUrl);
+    
+    console.log(`[RSS Proxy] Successfully parsed ${videos.length} videos with valid URLs`);
+    
+    // Convert URLs to embeddable format and auto-generate missing thumbnails
+    const videosWithThumbnails = await Promise.all(
+      videos.map(async (video) => {
+        video.videoUrl = convertToEmbeddableUrl(video.videoUrl);
+        
+        if (!video.thumbnailUrl && video.videoUrl) {
+          video.thumbnailUrl = await generateThumbnail(video.videoUrl);
+        }
+        return video;
+      })
+    );
+    
+    return videosWithThumbnails;
+    
+  } catch (error: any) {
+    console.error('[RSS Proxy] Error:', error.message);
+    throw new Error(`RSS Proxy failed: ${error.message}`);
+  }
+}
+
 export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
   // Validate URL
   if (!url || typeof url !== 'string') {
@@ -24,6 +123,17 @@ export async function parseRSSFeed(url: string): Promise<ParsedVideo[]> {
     new URL(url);
   } catch (e) {
     throw new Error(`Invalid URL format: ${url}`);
+  }
+
+  // Check if we should use RSS proxy (for feeds that block Vercel IPs)
+  // RSS2JSON is a free service that can bypass geographic restrictions
+  const useProxy = process.env.USE_RSS_PROXY === 'true' || 
+                   url.includes('pornhub.com') || 
+                   url.includes('xvideos.com');
+  
+  if (useProxy) {
+    console.log('[RSS Parser] Using RSS proxy for blocked feed');
+    return parseRSSFeedViaProxy(url);
   }
 
   const parser = new Parser({
